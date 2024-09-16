@@ -40,6 +40,8 @@ from pywikihow import search_wikihow
 import speedtest
 from pytube import YouTube
 import qrcode
+import openai
+from winotify import Notification, audio
 
 #Set our engine to "Pyttsx3" which is used for text to speech in Python 
 #and sapi5 is Microsoft speech application platform interface 
@@ -74,7 +76,14 @@ class MainThread(QThread):
             return command1
         except:
             return 'None'
-        
+    # Replace 'Your_own API Key' with your actual API key
+    def ai_command(self,query):
+        openai.api_key = 'Your_own API Key'  
+        response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": query}]
+        )
+        return response['choices'][0]['message']['content']  
     #Jarvis commands controller 
     def run_jarvis(self):
         self.wish()
@@ -320,7 +329,39 @@ class MainThread(QThread):
             elif 'sleep the system' in self.command:
                 self.talk("Boss the system is going to sleep")
                 os.system("rundll32.exe powrprof.dll, SetSuspendState 0,1,0")
-            
+            #command for using Chat-GPT for using AI in the conversation by telling 'using ai' in the command
+            # Eg: 
+            # Query: using ai tell me if i have a person named Varun and he want to keep in touch for learning more things then what to do ?
+            # Response: you should defineatly look for a conversation and also guide him in his journey .
+            elif "using ai" in self.command:
+                query = self.command.replace('using ai','')
+                self.talk("Boss According to Chat-GPT")
+                chatgpt_response = ai_command()
+                print(chatgpt_response)
+                self.talk(chatgpt_response)
+            #  command for setting a reminder as a notification which you can edit as per the needs
+            elif "set reminder" in self.command:
+                self.talk("Boss Please enter the details for the notification")
+                time_input = input("Enter the time in seconds after which the notification will be sent: ")
+                title_input = input("Enter the Title for the Notification: ")
+                
+                try:
+                    time_seconds = int(time_input)
+                except ValueError:
+                    print("Please enter a valid integer for the time.")
+                    exit()
+
+                toast = Notification(app_id="JARVIS",
+                                     title=title_input,
+                                     msg="This is a Short Reminder",
+                                     duration="short")
+
+                toast.add_actions(label="Reminder", launch="https://youtube.com") # You can edit the link as per the requirments
+                toast.set_audio(audio.LoopingAlarm10, loop=True)
+                # Schedule a timer based on user input
+                time.sleep(time_seconds)
+                toast.show()
+                
     #Intro msg
     def Intro(self):
         while True:
@@ -1075,7 +1116,7 @@ class MainThread(QThread):
     #no result found
     def No_result_found(self):
         self.talk('Boss I couldn\'t understand, could you please say it again.')        
-
+    
 startExecution = MainThread()
 class Main(QMainWindow):
     cpath =""
